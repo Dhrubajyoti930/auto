@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Driver Reverse Bidding Matrix</title>
+    <style>
+        :root {
+            --bg-color: #0b1329;
+            --card-bg: #1c2541;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #f59e0b; 
+            --primary-hover: #d97706;
+            --success: #10b981;
+            --danger: #ef4444;
+            --border: #3a506b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: #0b1329;
+            border-bottom: 2px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .trip-details h2 {
+            font-size: 1.3rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .trip-route {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .auction-info {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .live-badge {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--primary);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            border: 1px solid var(--primary);
+        }
+
+        .live-badge.ended {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border-color: var(--success);
+        }
+
+        .global-price {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--success);
+        }
+
+        .global-timer {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--danger);
+        }
+
+        .grid-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            padding: 16px;
+            background-color: #020c1b;
+        }
+
+        .user-square {
+            background-color: var(--card-bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .user-square.lowest-bidder-card {
+            border-color: var(--success);
+            box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.2);
+        }
+
+        .user-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+
+        .user-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #fff;
+        }
+
+        .user-badge {
+            font-size: 0.75rem;
+            background: #0b1329;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            color: var(--text-muted);
+        }
+
+        .user-body {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .bid-input-wrap {
+            display: flex;
+            gap: 8px;
+        }
+
+        input[type="number"] {
+            flex: 1;
+            padding: 10px;
+            background: #0b1329;
+            border: 1px solid var(--border);
+            color: #fff;
+            border-radius: 6px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        button {
+            padding: 10px 16px;
+            background-color: var(--primary);
+            color: #0b1329;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover { background-color: var(--primary-hover); }
+        button:disabled { background-color: #0b1329; color: var(--text-muted); cursor: not-allowed; border: 1px solid var(--border); }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .quick-btn {
+            background: #2a3447;
+            font-size: 0.85rem;
+            padding: 8px;
+            color: #fff;
+        }
+        .quick-btn:hover { background: #3a4761; }
+
+        .ticker-container {
+            background: #0b1329;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 0.85rem;
+            min-height: 60px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .ticker-message {
+            color: var(--text-main);
+            line-height: 1.4;
+            word-break: break-word;
+            transition: color 0.2s ease;
+        }
+
+        .ticker-message.highlight {
+            color: var(--primary);
+            text-shadow: 0 0 0.6px var(--primary), 0 0 0.6px var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="trip-details">
+            <h2>🛺 Active Ride Request</h2>
+            <div class="trip-route">Route: <strong>Nalgaria</strong> ➔ <strong>Agartala</strong> (Reverse Bidding Mode)</div>
+        </div>
+        <div class="auction-info">
+            <div id="global-status" class="live-badge">Drivers Bidding</div>
+            <div class="global-price">Lowest Offer: ₹<span id="master-price">350</span></div>
+            <div class="global-timer">⏱️ <span id="master-timer">45</span>s</div>
+        </div>
+    </header>
+
+    <div class="grid-container">
+        
+        <div class="user-square" id="card-Driver_Anand">
+            <div class="user-header">
+                <span class="user-name">🛺 Driver Anand</span>
+                <span class="user-badge" id="badge-Driver_Anand">Waiting</span>
+            </div>
+            <div class="user-body">
+                <div class="control-panel">
+                    <div class="bid-input-wrap">
+                        <input type="number" id="input-Driver_Anand" min="100">
+                        <button onclick="submitGridBid('Driver_Anand')">Offer</button>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="quick-btn" onclick="quickDrop('Driver_Anand', 10)">Drop ₹10</button>
+                        <button class="quick-btn" onclick="quickDrop('Driver_Anand', 25)">Drop ₹25</button>
+                    </div>
+                </div>
+                <div class="ticker-container"><div class="ticker-message" id="ticker-Driver_Anand"></div></div>
+            </div>
+        </div>
+
+        <div class="user-square" id="card-Driver_Bikram">
+            <div class="user-header">
+                <span class="user-name">🛺 Driver Bikram</span>
+                <span class="user-badge" id="badge-Driver_Bikram">Waiting</span>
+            </div>
+            <div class="user-body">
+                <div class="control-panel">
+                    <div class="bid-input-wrap">
+                        <input type="number" id="input-Driver_Bikram" min="100">
+                        <button onclick="submitGridBid('Driver_Bikram')">Offer</button>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="quick-btn" onclick="quickDrop('Driver_Bikram', 10)">Drop ₹10</button>
+                        <button class="quick-btn" onclick="quickDrop('Driver_Bikram', 25)">Drop ₹25</button>
+                    </div>
+                </div>
+                <div class="ticker-container"><div class="ticker-message" id="ticker-Driver_Bikram"></div></div>
+            </div>
+        </div>
+
+        <div class="user-square" id="card-Driver_Chandan">
+            <div class="user-header">
+                <span class="user-name">🛺 Driver Chandan</span>
+                <span class="user-badge" id="badge-Driver_Chandan">Waiting</span>
+            </div>
+            <div class="user-body">
+                <div class="control-panel">
+                    <div class="bid-input-wrap">
+                        <input type="number" id="input-Driver_Chandan" min="100">
+                        <button onclick="submitGridBid('Driver_Chandan')">Offer</button>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="quick-btn" onclick="quickDrop('Driver_Chandan', 10)">Drop ₹10</button>
+                        <button class="quick-btn" onclick="quickDrop('Driver_Chandan', 25)">Drop ₹25</button>
+                    </div>
+                </div>
+                <div class="ticker-container"><div class="ticker-message" id="ticker-Driver_Chandan"></div></div>
+            </div>
+        </div>
+
+        <div class="user-square" id="card-Driver_Dipak">
+            <div class="user-header">
+                <span class="user-name">🛺 Driver Dipak</span>
+                <span class="user-badge" id="badge-Driver_Dipak">Waiting</span>
+            </div>
+            <div class="user-body">
+                <div class="control-panel">
+                    <div class="bid-input-wrap">
+                        <input type="number" id="input-Driver_Dipak" min="100">
+                        <button onclick="submitGridBid('Driver_Dipak')">Offer</button>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="quick-btn" onclick="quickDrop('Driver_Dipak', 10)">Drop ₹10</button>
+                        <button class="quick-btn" onclick="quickDrop('Driver_Dipak', 25)">Drop ₹25</button>
+                    </div>
+                </div>
+                <div class="ticker-container"><div class="ticker-message" id="ticker-Driver_Dipak"></div></div>
+            </div>
+        </div>
+
+    </div>
+
+<script>
+    const drivers = ['Driver_Anand', 'Driver_Bikram', 'Driver_Chandan', 'Driver_Dipak'];
+    
+    let currentLowestBid = 350; 
+    let currentLowestBidder = "None";
+    let timeLeft = 45;
+    let auctionActive = true;
+    let timerInterval = null;
+
+    const localBus = new BroadcastChannel('auto_ride_bidding_bus');
+
+    window.onload = function() {
+        updateAllInputs();
+        startMasterCountdown();
+        updateTickers("System initialized. Maximum base fare ceiling set at ₹350.");
+    };
+
+    localBus.onmessage = function(event) {
+        if (event.data.type === 'PROCESS_REVERSE_BID') {
+            executeGlobalStateUpdate(event.data.user, event.data.amount);
+        }
+    };
+
+    function dispatchBid(user, amount) {
+        if (amount >= currentLowestBid) {
+            console.warn(`Race condition guarded: ${user} drop rejected.`);
+            return;
+        }
+
+        executeGlobalStateUpdate(user, amount);
+        
+        localBus.postMessage({
+            type: 'PROCESS_REVERSE_BID',
+            user: user,
+            amount: amount
+        });
+    }
+
+    function submitGridBid(user) {
+        if (!auctionActive) return;
+        
+        const inputField = document.getElementById(`input-${user}`);
+        const amount = parseInt(inputField.value);
+
+        if (isNaN(amount) || amount >= currentLowestBid) {
+            alert(`Rejected: ${user.replace('_',' ')}'s offer must be lower than ₹${currentLowestBid}.`);
+            return;
+        }
+        
+        if (amount < 100) {
+            alert(`Rejected: Offer is below the cost floor threshold (₹100).`);
+            return;
+        }
+
+        dispatchBid(user, amount);
+    }
+
+    function quickDrop(user, deduction) {
+        if (!auctionActive) return;
+        
+        const targetOffer = currentLowestBid - deduction;
+        
+        if (targetOffer < 100) {
+            alert("Minimum price margin boundary reached (₹100). Cannot drop further.");
+            return;
+        }
+
+        dispatchBid(user, targetOffer);
+    }
+
+    function executeGlobalStateUpdate(user, amount) {
+        if (amount < currentLowestBid && auctionActive) {
+            currentLowestBid = amount;
+            currentLowestBidder = user;
+
+            if (timeLeft < 8) timeLeft = 10;
+
+            document.getElementById('master-price').textContent = currentLowestBid;
+            document.getElementById('master-timer').textContent = timeLeft;
+
+            drivers.forEach(d => {
+                const card = document.getElementById(`card-${d}`);
+                const statusBadge = document.getElementById(`badge-${d}`);
+                
+                if (d === user) {
+                    card.classList.add('lowest-bidder-card');
+                    statusBadge.textContent = "Lowest Fare";
+                    statusBadge.style.color = "var(--success)";
+                } else {
+                    card.classList.remove('lowest-bidder-card');
+                    statusBadge.textContent = "Higher";
+                    statusBadge.style.color = "var(--danger)";
+                }
+            });
+
+            updateTickers(`🚕 ${user.replace('_', ' ')} slashed the active fare to ₹${amount}`, true);
+            updateAllInputs();
+        }
+    }
+
+    function updateAllInputs() {
+        drivers.forEach(d => {
+            const field = document.getElementById(`input-${d}`);
+            const nextSuggestedBid = currentLowestBid - 5;
+            field.value = nextSuggestedBid >= 100 ? nextSuggestedBid : 100;
+        });
+    }
+
+    function updateTickers(message, isHighlight = false) {
+        drivers.forEach(d => {
+            const ticker = document.getElementById(`ticker-${d}`);
+            ticker.textContent = message;
+            
+            if (isHighlight) {
+                ticker.classList.add('highlight');
+            } else {
+                ticker.classList.remove('highlight');
+            }
+        });
+    }
+
+    function startMasterCountdown() {
+        timerInterval = setInterval(() => {
+            if (timeLeft > 0) {
+                timeLeft--;
+                document.getElementById('master-timer').textContent = timeLeft;
+            } else {
+                finalizeAuction();
+            }
+        }, 1000);
+    }
+
+    function finalizeAuction() {
+        auctionActive = false;
+        clearInterval(timerInterval);
+
+        const globalStatus = document.getElementById('global-status');
+        
+        if (currentLowestBidder === "None") {
+            globalStatus.textContent = "EXPIRED";
+            globalStatus.className = "live-badge ended";
+            globalStatus.style.borderColor = "var(--danger)";
+            globalStatus.style.color = "var(--danger)";
+            globalStatus.style.backgroundColor = "rgba(239, 68, 68, 0.2)";
+        } else {
+            globalStatus.textContent = "BOOKED";
+            globalStatus.className = "live-badge ended";
+            globalStatus.style.color = "var(--success)";
+            globalStatus.style.backgroundColor = "rgba(16, 185, 129, 0.2)";
+        }
+
+        drivers.forEach(d => {
+            const statusBadge = document.getElementById(`badge-${d}`);
+            
+            if (currentLowestBidder === "None") {
+                statusBadge.textContent = "No Offers";
+                statusBadge.style.color = "var(--text-muted)";
+            } else if (d === currentLowestBidder) {
+                statusBadge.textContent = "Assigned!";
+                statusBadge.style.color = "var(--success)";
+            } else {
+                statusBadge.textContent = "Rejected";
+                statusBadge.style.color = "var(--text-muted)";
+                document.getElementById(`card-${d}`).classList.remove('lowest-bidder-card');
+            }
+        });
+
+        document.querySelectorAll(`input, button`).forEach(el => el.disabled = true);
+
+        const winnerReadable = currentLowestBidder !== "None" ? currentLowestBidder.replace('_', ' ') : "No Driver";
+        if (currentLowestBidder === "None") {
+            updateTickers(`❌ Auction Closed: No responses within the matching timeline.`, false);
+        } else {
+            updateTickers(`🏆 Match Confirmed: Assigned to ${winnerReadable} at ₹${currentLowestBid}!`, true);
+        }
+    }
+</script>
+</body>
+</html>
